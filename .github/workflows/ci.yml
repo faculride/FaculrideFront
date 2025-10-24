@@ -1,0 +1,63 @@
+name: CI/CD - Aula 6
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Etapa 1
+        run: echo "Baixando dependencias"
+      
+      - name: Etapa 2
+        run: echo "Lint"
+      
+      - name: Etapa 3
+        run: echo "Testes unitarios"
+      
+      - name: Etapa 4
+        run: echo "Build"
+      
+      - name: Instalar dependencias
+        run: npm ci
+      
+      - name: Instalar ferramenta de versao
+        run: npm install -g semver
+      
+      - name: Incrementar versão e criar tag
+        run: |
+          version=$(git tag --sort=-v:refname | head -n 1)
+          echo "Última versão encontrada: $version"
+
+          if [ -z "$version" ]; then
+            version="0.0.0"
+          fi
+
+          IFS='.' read -ra ver <<< "$version"
+          MAJOR=${ver[0]}
+          MINOR=${ver[1]}
+          PATCH=${ver[2]}
+          PATCH=$((PATCH+1))
+          version="$MAJOR.$MINOR.$PATCH"
+          echo "Nova versão: $version"
+
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+
+          git tag "v$version"
+          git push origin "v$version"
