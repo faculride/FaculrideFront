@@ -79,3 +79,38 @@ jobs:
       - name: Push da imagem Docker
         run: |
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/frontend-angular:latest
+      
+      # 🚀 DOCKER PASSO 4: publicar tags de versão no Docker Hub (SemVer, branch, SHA)
+      - name: Docker meta (extra tags & labels)
+        id: meta_extra
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/frontend-angular
+          tags: |
+            # SemVer quando push de tag vX[.Y[.Z]]
+            type=semver,pattern={{version}},prefix=,enable={{is_tag}}
+            type=semver,pattern={{major}}.{{minor}},prefix=,enable={{is_tag}}
+            type=semver,pattern={{major}},prefix=,enable={{is_tag}}
+
+            # (Opcional) tag com nome da branch (ex.: feature/minha-feature)
+            type=ref,event=branch
+
+            # (Opcional) tag com SHA curto do commit (ex.: :sha-1a2b3c4)
+            type=sha,format=short
+          labels: |
+            org.opencontainers.image.title=frontend-angular
+            org.opencontainers.image.source=${{ github.repositoryUrl }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ github.run_id }}
+
+      - name: Build & Push (extra tags)
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ${{ steps.meta_extra.outputs.tags }}
+          labels: ${{ steps.meta_extra.outputs.labels }}
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
